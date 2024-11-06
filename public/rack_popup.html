@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Pasien</title>
+    <link rel="stylesheet" href="styles/rack_popup_styles.css">
+</head>
+<body>
+    <div class="popup-container">
+        <span class="close" onclick="window.close()">&times;</span>
+        <h2>DETAIL PASIEN</h2>
+        <div id="patient-info">
+            <p id="status-message" style="display: none;">Rak ini belum digunakan</p>
+            <div id="patient-details" style="display: none;">
+                <p><strong>Nama Pasien:</strong> <span id="nama-pasien">Loading...</span></p>
+                <p><strong>No. RM:</strong> <span id="no-rm">Loading...</span></p>
+                <p><strong>Umur:</strong> <span id="umur">Loading...</span></p>
+                <p><strong>Jenis Kelamin:</strong> <span id="jenis-kelamin">Loading...</span></p>
+                <p><strong>Keterangan:</strong> <span id="keterangan">Loading...</span></p>
+            </div>
+        </div>
+        <h3>Obat:</h3>
+        <ul id="obat-list">
+            <li>Loading...</li>
+        </ul>
+        <button class="ready-button" onclick="markAsReady()">Ready</button>
+    </div>
+
+    <script>
+        // Mendapatkan nomor rak dari URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const rackNumber = urlParams.get('rackNumber');
+    
+        // Fungsi untuk memeriksa status rak
+        async function checkRakStatus() {
+            try {
+                const response = await fetch(`http://localhost:5005/api/checkRakStatus?rak_id=${rackNumber}`);
+                const data = await response.json();
+
+                if (data.status === 'empty') {
+                    document.getElementById('status-message').style.display = 'block';
+                    document.getElementById('patient-details').style.display = 'none';
+                    document.getElementById('obat-list').style.display = 'none';
+                } else {
+                    fetchPesanan(); // Ambil data pesanan jika rak tidak kosong
+                }
+            } catch (error) {
+                console.error('Error checking rak status:', error);
+                document.getElementById('status-message').textContent = 'Gagal memeriksa status rak';
+                document.getElementById('status-message').style.display = 'block';
+            }
+        }
+
+        // Fungsi untuk mengambil data pesanan dari server
+        async function fetchPesanan() {
+    try {
+        const response = await fetch(`http://localhost:5005/api/pesananByRak?rak_id=${rackNumber}`);
+        if (!response.ok) throw new Error('Pesanan tidak ditemukan');
+        
+        const data = await response.json();
+        console.log('Data yang diterima:', data);  // Debug log untuk memeriksa data yang diterima
+
+        // Menampilkan data pasien
+        document.getElementById('patient-details').style.display = 'block';
+        document.getElementById('nama-pasien').textContent = data.pasien.nama_pasien;
+        document.getElementById('no-rm').textContent = data.pasien.no_rm;
+        document.getElementById('umur').textContent = data.pasien.umur;
+        document.getElementById('jenis-kelamin').textContent = data.pasien.jenis_kelamin;
+        document.getElementById('keterangan').textContent = data.pasien.keterangan;
+
+        // Menampilkan daftar obat
+        const obatList = document.getElementById('obat-list');
+        obatList.innerHTML = ''; // Kosongkan isi awal
+        data.obat.forEach(obat => {
+            const li = document.createElement('li');
+            li.textContent = `${obat.nama_obat} ${obat.jumlah}x${obat.dosis}`;
+            obatList.appendChild(li);
+        });
+    } catch (error) {
+        console.error('Error fetching pesanan:', error);
+        document.getElementById('status-message').textContent = 'Data tidak ditemukan';
+        document.getElementById('status-message').style.display = 'block';
+        document.getElementById('patient-details').style.display = 'none';
+        document.getElementById('obat-list').innerHTML = '';
+    }
+}
+
+    
+        // Memanggil fungsi checkRakStatus saat halaman dimuat
+        checkRakStatus();
+    
+        async function markAsReady() {
+            try {
+                const response = await fetch('http://localhost:5005/api/updateRakStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rak_id: rackNumber })
+                });
+    
+                if (response.ok) {
+                    alert('Status rak berhasil diubah menjadi "ready".');
+                    window.close();
+                } else {
+                    alert('Gagal mengubah status rak.');
+                }
+            } catch (error) {
+                console.error('Error updating rak status:', error);
+                alert('Gagal mengubah status rak.');
+            }
+        }
+    </script>
+</body>
+</html>

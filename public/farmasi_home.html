@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Farmasi</title>
+    <link rel="stylesheet" href="styles/farmasi_home_styles.css">
+</head>
+<body>
+    <div class="header">
+        <h2>RESEP TERUPDATE</h2>
+        <div class="info">
+            <p>Nama Pasien: </p>
+            <p>Gender: </p>
+            <p>Obat:</p>
+            <ul>
+  
+            </ul>
+        </div>
+    </div>
+    
+    <div class="button-container">
+        <button id="rak-1" onclick="openPopup(1)">Rak 1</button>
+        <button id="rak-2" onclick="openPopup(2)">Rak 2</button>
+        <button id="rak-3" onclick="openPopup(3)">Rak 3</button>
+        <button id="rak-4" onclick="openPopup(4)">Rak 4</button>
+        <button id="rak-5" onclick="openPopup(5)">Rak 5</button>
+        <button id="rak-6" onclick="openPopup(6)">Rak 6</button>
+    </div>
+
+    <script>
+        // Fungsi untuk membuka popup dan menampilkan data pesanan
+        function openPopup(rackNumber) {
+            window.open(`rack_popup.html?rackNumber=${rackNumber}`, 'Popup', 'width=1200,height=800');
+        }
+    
+        // Fungsi untuk mengambil status rak dari server dan memperbarui warna serta teks tombol
+        async function fetchRakStatus() {
+            try {
+                const response = await fetch('http://localhost:5005/api/rakStatus');
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const rakData = await response.json();
+                console.log('Data rak dari server:', rakData);  // Debug log
+    
+                rakData.forEach(rak => {
+                    const button = document.getElementById(`rak-${rak.nomor_rak}`);
+    
+                    // Update warna berdasarkan status rak
+                    if (rak.status === 'empty') {
+                        button.className = 'button-empty';
+                        button.textContent = `Rak ${rak.nomor_rak}`;
+                    } else if (rak.status === 'fill') {
+                        button.className = 'button-needs-fill';
+                        button.textContent = `Rak ${rak.nomor_rak}\n${rak.nama_pasien}`;
+                    } else if (rak.status === 'ready') {
+                        button.className = 'button-occupied';
+                        button.textContent = rak.nama_pasien || `Rak ${rak.nomor_rak}`;
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching rak status:', error);
+            }
+        }
+
+        async function fetchLatestPesanan() {
+        try {
+            const response = await fetch('http://localhost:5005/api/latestPesanan');
+            if (!response.ok) throw new Error('Pesanan terbaru tidak ditemukan');
+    
+            const data = await response.json();
+            console.log('Data pesanan terbaru:', data); // Debug log untuk memeriksa data yang diterima
+    
+            // Menampilkan data pasien
+            document.querySelector('.info p:nth-child(1)').textContent = `Nama Pasien: ${data.pasien.nama_pasien}`;
+            document.querySelector('.info p:nth-child(2)').textContent = `Gender: ${data.pasien.jenis_kelamin}`;
+    
+            // Menampilkan daftar obat
+            const obatList = document.querySelector('.info ul');
+            obatList.innerHTML = ''; // Kosongkan isi awal
+            data.obat.forEach(obat => {
+                const li = document.createElement('li');
+                li.textContent = `${obat.nama_obat} ${obat.jumlah}x${obat.dosis}`;
+                obatList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error fetching latest pesanan:', error);
+        }
+    }
+    
+        // Inisialisasi status rak dan data terbaru saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchRakStatus();
+            fetchLatestPesanan();
+    
+            // Refresh status rak setiap 10 detik
+            setInterval(() => {
+                fetchRakStatus();
+                fetchLatestPesanan();  // Memastikan data terbaru ditampilkan setiap 10 detik
+            }, 1000);
+        });
+    </script>
+    
+    
+</body>
+</html>

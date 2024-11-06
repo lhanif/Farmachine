@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Poliklinik</title>
+    <link rel="stylesheet" href="\styles\klinik_home_styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> <!-- Tambahkan library QRCode.js -->
+</head>
+<body>
+    <div class="container">
+        <div class="left-section">
+            <h2>BUAT RESEP</h2>
+            <div class="form-group">
+                <label for="nik">NIK</label>
+                <input type="text" id="nik" placeholder="Masukkan NIK">
+                <button class="btn-search" onclick="cariPasien()">Search</button>
+            </div>
+            <div class="form-group">
+                <h3>DATA PASIEN</h3>
+                <p>Nama Lengkap: <span id="nama"></span></p>
+                <p>No. RM: <span id="rm"></span></p> <!-- Contoh No. RM untuk testing -->
+                <p>Umur: <span id="umur"></span></p>
+                <p>Jenis Kelamin: <span id="jenisKelamin"></span></p>
+            </div>
+            <div class="form-group">
+                <h3>TAMBAH OBAT</h3>
+                <label for="namaObat">Nama Obat</label>
+                <input type="text" id="namaObat" placeholder="Masukkan nama obat">
+            </div>
+            <div class="form-group">
+                <div class="form-group-small">
+                    <label for="rep">rep</label>
+                    <input type="number" id="rep" placeholder="Jumlah">
+                </div>
+                <div class="form-group-small">
+                    <label for="dose">dose</label>
+                    <input type="number" id="dose" placeholder="Dosis">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="keterangan">Keterangan Tambahan</label>
+                <input type="text" id="keterangan" placeholder="Keterangan tambahan">
+            </div>
+            <button class="btn-add" onclick="tambahObat()">+ TAMBAH</button>
+
+            <!-- Tambahkan tombol untuk melihat daftar pesanan di bawah form -->
+            <button onclick="location.href='data_pesanan.html'" class="btn-view-orders">Lihat Data Pesanan</button>
+        </div>
+
+        <div class="right-section">
+            <h2>DAFTAR OBAT</h2>
+            <ul id="daftarObat"></ul>
+            <button class="btn-input" onclick="simpanObat()">INPUT</button>
+            <div id="qrCodeContainer"></div> <!-- Placeholder for QR Code -->
+        </div>
+    </div>
+    <script src="\script\klinikHome_script.js"></script>
+</body>
+</html>

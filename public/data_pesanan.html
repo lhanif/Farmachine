@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Pesanan</title>
+    <link rel="stylesheet" href="\styles\data_pesanan_styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Data Pesanan</h1>
+    <div class="order-list" id="orderList"></div>
+
+    <script>
+        async function loadOrders() {
+            try {
+                const response = await fetch('http://localhost:5005/api/orders');
+                if (response.ok) {
+                    const orders = await response.json();
+                    const orderList = document.getElementById('orderList');
+
+                    const latestRakMap = {};
+
+                    orders.forEach(order => {
+                        if (!latestRakMap[order.rak_id]) {
+                            latestRakMap[order.rak_id] = order.id;
+                        } else {
+                            latestRakMap[order.rak_id] = Math.max(latestRakMap[order.rak_id], order.id);
+                        }
+                    });
+
+                    orders.forEach(order => {
+                        const orderElement = document.createElement('div');
+                        orderElement.className = 'order-item';
+
+                        if (latestRakMap[order.rak_id] === order.id) {
+                            orderElement.style.backgroundColor = '#ffffff';
+                        } else {
+                            orderElement.style.backgroundColor = '#ff3665';
+                        }
+
+                        const obatListHTML = order.obat.map(obat => `
+                            <li>${obat.nama_obat} - ${obat.jumlah}x${obat.dosis}</li>
+                        `).join('');
+
+                        orderElement.innerHTML = `
+                            <p><strong>Pesanan ID:</strong> ${order.id}</p>
+                            <p><strong>NIK:</strong> ${order.nik}</p>
+                            <p><strong>Nama Pasien:</strong> ${order.nama_pasien}</p>
+                            <p><strong>No RM:</strong> ${order.no_rm}</p>
+                            <p><strong>Umur:</strong> ${order.umur}</p>
+                            <p><strong>Jenis Kelamin:</strong> ${order.jenis_kelamin}</p>
+                            <p><strong>Keterangan:</strong> ${order.keterangan || ''}</p>
+                            <p><strong>Rak ID:</strong> ${order.rak_id || 'Belum ditentukan'}</p>
+                            <p><strong>Obat:</strong></p>
+                            <ul>${obatListHTML}</ul>
+                            <button onclick="generateQR(${order.id}, '${order.no_rm}', ${order.rak_id})">Generate QR</button>
+                            <div id="qrCode-${order.id}" class="qr-code"></div>
+                            <div class="whatsapp-send">
+                                <input type="text" id="whatsappNumber-${order.id}" placeholder="Masukkan No WhatsApp" />
+                                <button onclick="sendToWhatsApp(${order.id})">Kirim ke WhatsApp</button>
+                            </div>
+                        `;
+                        orderList.appendChild(orderElement);
+                    });
+                } else {
+                    alert('Gagal memuat data pesanan');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat memuat data pesanan');
+            }
+        }
+
+        async function generateQR(idPesanan, no_rm, idRak) {
+            const qrContainer = document.getElementById(`qrCode-${idPesanan}`);
+            qrContainer.innerHTML = "";
+
+            const qrSize = 200;
+            const canvasSize = 400;
+            const canvas = document.createElement("canvas");
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            const ctx = canvas.getContext("2d");
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+            const tempDiv = document.createElement("div");
+            new QRCode(tempDiv, {
+                text: `${idPesanan}-${no_rm}-${idRak}`,
+                width: qrSize,
+                height: qrSize
+            });
+
+            setTimeout(async () => {
+                const qrCodeImage = tempDiv.querySelector("img");
+
+                if (qrCodeImage) {
+                    ctx.drawImage(
+                        qrCodeImage,
+                        (canvasSize - qrSize) / 2,
+                        (canvasSize - qrSize) / 2,
+                        qrSize,
+                        qrSize
+                    );
+                    qrContainer.appendChild(canvas);
+
+                    // Ambil data URL dari canvas
+                    const imageUrl = canvas.toDataURL("image/png");
+
+                    // Kirim gambar ke server untuk disimpan di Cloudinary
+                    try {
+                        const response = await fetch('http://localhost:5005/save-qr', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ idPesanan, imageUrl })
+                        });
+
+                        const result = await response.json();
+                        console.log('Cloudinary URL:', result.url);
+                        alert('QR code berhasil disimpan di Cloudinary.');
+                    } catch (error) {
+                        console.error('Error saving QR code to Cloudinary:', error);
+                        alert('Gagal menyimpan QR code ke Cloudinary.');
+                    }
+                }
+            }, 500);
+        }
+
+
+        async function saveQrToServer(idPesanan, imageUrl) {
+            try {
+                const response = await fetch('http://localhost:5005/save-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idPesanan, imageUrl })
+                });
+
+                const result = await response.json();
+                console.log('QR code saved:', result);
+                alert('QR code berhasil disimpan di server.');
+            } catch (error) {
+                console.error('Error saving QR code to server:', error);
+                alert('Gagal menyimpan QR code ke server.');
+            }
+        }
+
+
+        async function sendToWhatsApp(idPesanan) {
+            const whatsappNumberInput = document.getElementById(`whatsappNumber-${idPesanan}`);
+            let whatsappNumber = whatsappNumberInput.value.trim();
+
+            if (!whatsappNumber) {
+                alert('Silakan masukkan nomor WhatsApp terlebih dahulu.');
+                return;
+            }
+
+            // Pastikan format nomor WhatsApp sesuai standar Twilio
+            if (!whatsappNumber.startsWith("whatsapp:+")) {
+                whatsappNumber = `whatsapp:+62${whatsappNumber.slice(1)}`;
+            }
+
+            console.log("Nomor WhatsApp yang dikirim:", whatsappNumber); // Log nomor yang dikirim ke Twilio
+
+            // Ambil URL QR dari Cloudinary
+            const response = await fetch(`http://localhost:5005/get-qr-url?idPesanan=${idPesanan}`);
+            const { url: qrUrl } = await response.json();
+
+            try {
+                const sendResponse = await fetch('http://localhost:5005/send-whatsapp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        whatsappNumber: whatsappNumber,
+                        imageUrl: qrUrl
+                    })
+                });
+
+                const result = await sendResponse.text();
+                console.log("Respons dari server setelah mengirim WA:", result);
+                alert(result);
+            } catch (error) {
+                console.error('Error mengirim pesan WhatsApp:', error);
+                alert('Gagal mengirim pesan WhatsApp');
+            }
+        }
+
+
+        loadOrders();
+    </script>
+</body>
+</html>

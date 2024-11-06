@@ -1,0 +1,20 @@
+{
+  "name": "farmachine",
+  "version": "1.0.0",
+  "description": "Otomasi Unit Farmasi pada Instansi Layanan Kesehatan",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cloudinary": "^2.5.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "mqtt": "^5.10.1",
+    "pg": "^8.13.1",
+    "twilio": "^5.3.5",
+    "uuid": "^11.0.2"
+  }
+}
